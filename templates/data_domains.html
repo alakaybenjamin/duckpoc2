@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Data Domain Search</h1>
+    <form method="GET" action="{{ url_for('data_domains') }}" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Search data domains..." value="{{ request.args.get('q', '') }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+    </form>
+
+    {% if results %}
+    <div class="results">
+        {% for domain in results %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ domain.domain_name }}</h5>
+                <p class="card-text">{{ domain.description }}</p>
+                <div class="schema-info">
+                    <h6>Schema Information</h6>
+                    <p><strong>Format:</strong> {{ domain.schema.format }}</p>
+                    <pre class="bg-light p-2"><code>{{ domain.schema.definition | tojson(indent=2) }}</code></pre>
+                </div>
+                <div class="metadata mt-3">
+                    <small class="text-muted">
+                        Owner: {{ domain.ownership.owner }} | 
+                        Last Updated: {{ domain.ownership.updated_at | datetime }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No results found.</p>
+    {% endif %}
+</div>
+{% endblock %}

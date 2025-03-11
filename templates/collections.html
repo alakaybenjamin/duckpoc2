@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>My Collections</h1>
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createCollectionModal">
+                Create New Collection
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="collectionActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Actions
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="collectionActionsDropdown">
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#addToCollectionModal">
+                        <i class="bi bi-plus-circle me-2"></i>Add Items to Collection
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collections List -->
+    <div id="collectionsContainer">
+        <!-- Collections will be dynamically added here -->
+    </div>
+
+    <!-- Create Collection Modal -->
+    <div class="modal fade" id="createCollectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New Collection</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createCollectionForm">
+                        <div class="mb-3">
+                            <label for="collectionTitle" class="form-label">Title</label>
+                            <input type="text" class="form-control" id="collectionTitle" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="collectionDescription" class="form-label">Description</label>
+                            <textarea class="form-control" id="collectionDescription"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="createCollection()">Create</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add to Collection Modal -->
+    <div class="modal fade" id="addToCollectionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Items to Collection</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="search-section mb-4">
+                        <input type="text" class="form-control mb-2" id="searchInput" placeholder="Search for items...">
+                        <div id="searchResults" class="border rounded p-2 mt-2"></div>
+                    </div>
+                    <div id="selectedItems" class="mb-3">
+                        <h6>Selected Items:</h6>
+                        <div id="selectedItemsList" class="border rounded p-2"></div>
+                    </div>
+                    <div class="collections-section">
+                        <h6>Choose Collection:</h6>
+                        <div id="collectionsListContainer" class="border rounded p-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.collection-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.collection-title {
+    font-size: 1.2em;
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.collection-meta {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-bottom: 15px;
+}
+
+.data-product-item {
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.data-product-title {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.data-product-meta {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+
+.selected-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 8px;
+    margin-bottom: 4px;
+}
+</style>
+
+<script>
+// Helper functions for showing messages
+function showError(message) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'alert alert-danger alert-dismissible fade show';
+    errorDiv.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.d-flex'));
+    setTimeout(() => {
+        errorDiv.remove();
+    }, 5000);
+}
+
+function showSuccess(message) {
+    const successDiv = document.createElement('div');
+    successDiv.className = 'alert alert-success alert-dismissible fade show';
+    successDiv.innerHTML = `${message} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.querySelector('.container').insertBefore(successDiv, document.querySelector('.d-flex'));
+    setTimeout(() => {
+        successDiv.remove();
+    }, 5000);
+}
+
+// Load and display collections
+function loadCollections() {
+    console.log('Loading collections, checking server auth status...');
+    
+    // Check if already server-authenticated before making requests
+    const isServerAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+    
+    if (isServerAuthenticated) {
+        console.log('User is authenticated server-side, proceeding with fetch');
+        // For server-authenticated users, we don't need to check localStorage or redirect
+        fetchCollections();
+    } else {
+        // For client-only auth, check localStorage
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+            console.log('No auth token in localStorage and not server authenticated');
+            window.location.href = '/auth/login?next=/collections';
+            return;
+        }
+        fetchCollections(token);
+    }
+    
+    // Separate function to fetch collections with appropriate auth
+    function fetchCollections(token = null) {
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Add token if provided (for client-side auth)
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        fetch('/api/collections', { headers })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 401 && !isServerAuthenticated) {
+                    console.log('Auth failed, redirecting to login');
+                    window.location.href = '/auth/login?next=/collections';
+                    return null;
+                }
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(collections => {
+            if (!collections) return; // Early return if redirected
+            
+            const container = document.getElementById('collectionsContainer');
+            container.innerHTML = collections.length ? '' : '<p class="text-muted">No collections yet</p>';
+    
+            collections.forEach(collection => {
+                const card = document.createElement('div');
+                card.className = 'collection-card';
+                card.innerHTML = `
+                    <div class="collection-title">${collection.title}</div>
+                    <div class="collection-meta">
+                        Created: ${new Date(collection.created_at).toLocaleDateString()}<br>
+                        ${collection.description || ''}
+                    </div>
+                    <div class="data-products">
+                        ${collection.items?.map(item => `
+                            <div class="data-product-item">
+                                <div class="data-product-title">${item.data_product.title}</div>
+                                <div class="data-product-meta">
+                                    Type: ${item.data_product.type}<br>
+                                    Format: ${item.data_product.format}
+                                </div>
+                            </div>
+                        `).join('') || 'No items in this collection'}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading collections:', error);
+            showError('Failed to load collections');
+        });
+    }
+}
+
+// Create new collection
+async function createCollection() {
+    const title = document.getElementById('collectionTitle').value.trim();
+    const description = document.getElementById('collectionDescription').value.trim();
+
+    if (!title) {
+        showError('Title is required');
+        return;
+    }
+
+    try {
+        // Build request headers based on authentication method
+        const headers = { 'Content-Type': 'application/json' };
+        const isServerAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+        
+        // For client-side auth, add token
+        if (!isServerAuthenticated) {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                console.log('No auth token in localStorage for createCollection');
+                return;
+            }
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch('/api/collections', {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify({ title, description })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        // Close modal and reload collections
+        bootstrap.Modal.getInstance(document.getElementById('createCollectionModal')).hide();
+        document.getElementById('createCollectionForm').reset();
+        loadCollections();
+
+        showSuccess('Collection created successfully');
+    } catch (error) {
+        console.error('Error creating collection:', error);
+        showError('Failed to create collection');
+    }
+}
+
+// Initialize event listeners and load collections
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize search functionality 
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', async (e) => {
+            const query = e.target.value.trim();
+            if (query.length < 2) return;
+
+            try {
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&per_page=5`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    }
+                });
+                const data = await response.json();
+
+                const resultsDiv = document.getElementById('searchResults');
+                if (data.results.length === 0) {
+                    resultsDiv.innerHTML = '<p class="text-muted">No results found</p>';
+                    return;
+                }
+
+                resultsDiv.innerHTML = data.results.map(result => `
+                    <div class="data-product-item">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="dp-${result.id}" 
+                                   data-product-id="${result.id}">
+                            <label class="form-check-label" for="dp-${result.id}">
+                                ${result.title}
+                            </label>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Add change event listeners to checkboxes
+                document.querySelectorAll('.form-check-input').forEach(checkbox => {
+                    checkbox.addEventListener('change', updateSelectedItemsList);
+                });
+            } catch (error) {
+                console.error('Error searching:', error);
+                document.getElementById('searchResults').innerHTML = 
+                    '<p class="text-danger">Error performing search</p>';
+            }
+        });
+    }
+}, { once: true });
+
+// Update selected items list
+function updateSelectedItemsList() {
+    const selectedItemsList = document.getElementById('selectedItemsList');
+    if (!selectedItemsList) return;
+
+    const checkedProducts = document.querySelectorAll('.form-check-input:checked');
+    const items = Array.from(checkedProducts).map(checkbox => {
+        const label = checkbox.nextElementSibling.textContent.trim();
+        return `<div class="selected-item">${label}</div>`;
+    });
+
+    selectedItemsList.innerHTML = items.length > 0 
+        ? items.join('') 
+        : '<p class="text-muted">No items selected</p>';
+}
+</script>
+
+<script>
+// Anti-redirect protection system
+(function() {
+    console.log('Initializing collections page protection');
+    
+    // Keep track of fetch calls to collections API
+    let isFirstLoad = true;
+    let collectionsFetchCount = 0;
+    let lastCollectionsFetch = 0;
+    let redirectCount = 0;
+    
+    // Only run loadCollections once on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Collections page loaded - initializing once');
+        
+        if (isFirstLoad) {
+            isFirstLoad = false;
+            console.log('First load - calling loadCollections');
+            
+            // We use setTimeout to ensure our protections are in place first
+            setTimeout(function() {
+                try {
+                    loadCollections();
+                } catch (e) {
+                    console.error('Error in loadCollections:', e);
+                }
+            }, 10);
+        }
+    }, { once: true });
+    
+    // Override window.location to prevent redirect loops
+    const originalWindowLocation = Object.getOwnPropertyDescriptor(window, 'location');
+    let isRedirecting = false;
+    
+    Object.defineProperty(window, 'location', {
+        get: function() {
+            return originalWindowLocation.get.call(this);
+        },
+        set: function(url) {
+            if (typeof url === 'string' && url.includes('/auth/login?next=/collections')) {
+                redirectCount++;
+                
+                if (redirectCount > 1) {
+                    console.warn('Preventing repeated redirect to login page');
+                    // Instead of redirecting, refresh the current page
+                    if (!isRedirecting) {
+                        isRedirecting = true;
+                        console.log('Page will be refreshed instead of redirecting');
+                        
+                        // Use the original descriptor to reload the page instead
+                        setTimeout(function() {
+                            originalWindowLocation.set.call(this, '/collections'); 
+                        }, 500);
+                    }
+                    return;
+                }
+                
+                console.log('Allowing first redirect to login page');
+            }
+            
+            // Call the original setter
+            return originalWindowLocation.set.call(this, url);
+        },
+        configurable: true
+    });
+    
+    // Override the fetch API to track and limit collection API calls
+    const originalFetch = window.fetch;
+    
+    window.fetch = function(...args) {
+        const url = args[0];
+        const now = Date.now();
+        
+        // Handle collections API specifically
+        if (typeof url === 'string' && url.includes('/api/collections')) {
+            collectionsFetchCount++;
+            
+            // Don't allow more than one collections API call per 5 seconds
+            if (now - lastCollectionsFetch < 5000 && collectionsFetchCount > 1) {
+                console.warn(`Blocking repeated collections API call (#${collectionsFetchCount})`);
+                return Promise.resolve(new Response(JSON.stringify({ collections: [] })));
+            }
+            
+            console.log(`Making collections API call #${collectionsFetchCount}`);
+            lastCollectionsFetch = now;
+        }
+        
+        return originalFetch.apply(this, args);
+    };
+    
+    console.log('Collection page protection initialized');
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,391 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Saved Searches</h1>
+    <div id="errorContainer"></div>
+    <div class="saved-searches" id="savedSearches">
+        <!-- Saved searches will be dynamically added here -->
+    </div>
+</div>
+
+<style>
+    .saved-search-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .saved-search-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .saved-search-title {
+        font-size: 1.2em;
+        color: #2c3e50;
+        margin-bottom: 10px;
+    }
+    .saved-search-meta {
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    .saved-search-filters {
+        margin-top: 10px;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+        font-size: 0.85em;
+    }
+    .filter-tag {
+        display: inline-block;
+        padding: 2px 8px;
+        margin: 2px;
+        background-color: #e9ecef;
+        border-radius: 12px;
+        font-size: 0.85em;
+    }
+    .saved-search-actions {
+        margin-top: 10px;
+    }
+    .error-message {
+        color: #dc3545;
+        padding: 15px;
+        margin: 10px 0;
+        border: 1px solid #dc3545;
+        border-radius: 4px;
+        background-color: #f8d7da;
+    }
+    .no-searches {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+</style>
+
+<script>
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    }
+
+    function formatFilters(filters) {
+        if (!filters || Object.keys(filters).length === 0) {
+            return 'No filters applied';
+        }
+
+        const filterLabels = {
+            status: 'Status',
+            phase: 'Phase',
+            start_date: 'Start Date',
+            end_date: 'End Date',
+            indication_category: 'Indication Category',
+            severity: 'Severity',
+            procedure_category: 'Procedure Category',
+            risk_level: 'Risk Level',
+            min_duration: 'Min Duration',
+            max_duration: 'Max Duration'
+        };
+
+        return Object.entries(filters)
+            .filter(([_, value]) => value)
+            .map(([key, value]) => {
+                return `<span class="filter-tag">${filterLabels[key] || key}: ${value}</span>`;
+            })
+            .join(' ');
+    }
+
+    function showError(message) {
+        const errorContainer = document.getElementById('errorContainer');
+        errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    function clearError() {
+        const errorContainer = document.getElementById('errorContainer');
+        errorContainer.innerHTML = '';
+    }
+
+    async function loadSavedSearches() {
+        console.log('Loading saved searches, checking auth status...');
+        
+        // Check if already server-authenticated before making requests
+        const isServerAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+        
+        if (isServerAuthenticated) {
+            console.log('User is authenticated server-side, proceeding with fetch');
+            // For server-authenticated users, we don't need to check localStorage or redirect
+            fetchSavedSearches();
+        } else {
+            // For client-only auth, check localStorage
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                console.log('No auth token in localStorage and not server authenticated');
+                window.location.href = '/auth/login?next=/saved-searches';
+                return;
+            }
+            fetchSavedSearches(token);
+        }
+        
+        // Separate function to fetch saved searches with appropriate auth
+        async function fetchSavedSearches(token = null) {
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                
+                // Add token if provided (for client-side auth)
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+                
+                const response = await fetch('/api/saved-searches', { headers });
+
+                if (!response.ok) {
+                    if (response.status === 401 && !isServerAuthenticated) {
+                        console.log('Auth failed, redirecting to login');
+                        window.location.href = '/auth/login?next=/saved-searches';
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                clearError();
+
+                const savedSearchesContainer = document.getElementById('savedSearches');
+                savedSearchesContainer.innerHTML = ''; // Clear existing items
+
+                if (!data || data.length === 0) {
+                    savedSearchesContainer.innerHTML = '<div class="no-searches">No saved searches available</div>';
+                    return;
+                }
+
+                data.forEach(search => {
+                    const card = document.createElement('div');
+                    card.className = 'saved-search-card';
+                    card.innerHTML = `
+                        <div class="saved-search-title">
+                            ${search.query.split('|').map(term => `"${term.trim()}"`).join(' OR ')}
+                        </div>
+                        <div class="saved-search-meta">
+                            Category: ${search.category || 'All'}<br>
+                            Saved: ${formatDate(search.created_at)}
+                        </div>
+                        <div class="saved-search-filters">
+                            ${formatFilters(search.filters)}
+                        </div>
+                        <div class="saved-search-actions">
+                            <button class="btn btn-sm btn-primary" onclick="executeSavedSearch('${search.id}')">Execute</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteSavedSearch('${search.id}')">Delete</button>
+                        </div>
+                    `;
+                    savedSearchesContainer.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading saved searches:', error);
+                showError('Error loading saved searches. Please try again.');
+            }
+        }
+    }
+
+    async function executeSavedSearch(searchId) {
+        try {
+            // Check for server-side auth first
+            const isServerAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+            
+            // Prepare headers
+            const headers = { 'Content-Type': 'application/json' };
+            if (!isServerAuthenticated) {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    console.error('No auth token available for executing saved search');
+                    showError('Authentication error. Please login again.');
+                    return;
+                }
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            const response = await fetch(`/api/saved-searches/${searchId}/execute`, {
+                method: 'POST',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                if (response.status === 401 && !isServerAuthenticated) {
+                    window.location.href = '/auth/login?next=/saved-searches';
+                    return;
+                }
+                throw new Error(`Error executing search: ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (!data.query) {
+                throw new Error('Invalid search data returned');
+            }
+
+            // Build the search URL with parameters
+            const params = new URLSearchParams();
+            params.append('q', data.query);
+            
+            // Add the category parameter if present
+            if (data.category) {
+                params.append('category', data.category);
+            }
+
+            // Add all filters from the saved search
+            if (data.filters) {
+                Object.entries(data.filters).forEach(([key, value]) => {
+                    if (value) {
+                        params.append(key, value);
+                    }
+                });
+            }
+
+            // Redirect to the search page with all parameters
+            window.location.href = `/?${params.toString()}`;
+        } catch (error) {
+            console.error('Error executing saved search:', error);
+            showError('Error executing saved search. Please try again.');
+        }
+    }
+
+    async function deleteSavedSearch(searchId) {
+        if (!confirm('Are you sure you want to delete this saved search?')) {
+            return;
+        }
+
+        try {
+            // Check for server-side auth first
+            const isServerAuthenticated = document.body.getAttribute('data-authenticated') === 'true';
+            
+            // Prepare headers
+            const headers = { 'Content-Type': 'application/json' };
+            if (!isServerAuthenticated) {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    console.error('No auth token available for deleting saved search');
+                    showError('Authentication error. Please login again.');
+                    return;
+                }
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            const response = await fetch(`/api/saved-searches/${searchId}`, {
+                method: 'DELETE',
+                headers: headers
+            });
+
+            if (!response.ok) {
+                if (response.status === 401 && !isServerAuthenticated) {
+                    window.location.href = '/auth/login?next=/saved-searches';
+                    return;
+                }
+                throw new Error(`Failed to delete saved search: ${response.status}`);
+            }
+
+            // Reload the saved searches list
+            loadSavedSearches();
+        } catch (error) {
+            console.error('Error deleting saved search:', error);
+            showError('Error deleting saved search. Please try again.');
+        }
+    }
+
+    // Load saved searches when the page loads
+    document.addEventListener('DOMContentLoaded', loadSavedSearches);
+</script>
+
+<script>
+// Anti-redirect protection system for saved searches page
+(function() {
+    console.log('Initializing saved searches page protection');
+    
+    // Keep track of fetch calls to saved searches API
+    let isFirstLoad = true;
+    let savedSearchesFetchCount = 0;
+    let lastSavedSearchesFetch = 0;
+    let redirectCount = 0;
+    
+    // Only run loadSavedSearches once on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Saved searches page loaded - initializing once');
+        
+        if (isFirstLoad) {
+            isFirstLoad = false;
+            console.log('First load - calling loadSavedSearches');
+            
+            // We use setTimeout to ensure our protections are in place first
+            setTimeout(function() {
+                try {
+                    loadSavedSearches();
+                } catch (e) {
+                    console.error('Error in loadSavedSearches:', e);
+                }
+            }, 10);
+        }
+    }, { once: true });
+    
+    // Override window.location to prevent redirect loops
+    const originalWindowLocation = Object.getOwnPropertyDescriptor(window, 'location');
+    let isRedirecting = false;
+    
+    Object.defineProperty(window, 'location', {
+        get: function() {
+            return originalWindowLocation.get.call(this);
+        },
+        set: function(url) {
+            if (typeof url === 'string' && url.includes('/auth/login?next=/saved-searches')) {
+                redirectCount++;
+                
+                if (redirectCount > 1) {
+                    console.warn('Preventing repeated redirect to login page');
+                    // Instead of redirecting, refresh the current page
+                    if (!isRedirecting) {
+                        isRedirecting = true;
+                        console.log('Page will be refreshed instead of redirecting');
+                        
+                        // Use the original descriptor to reload the page instead
+                        setTimeout(function() {
+                            originalWindowLocation.set.call(this, '/saved-searches'); 
+                        }, 500);
+                    }
+                    return;
+                }
+                
+                console.log('Allowing first redirect to login page');
+            }
+            
+            // Call the original setter
+            return originalWindowLocation.set.call(this, url);
+        },
+        configurable: true
+    });
+    
+    // Override the fetch API to track and limit saved searches API calls
+    const originalFetch = window.fetch;
+    
+    window.fetch = function(...args) {
+        const url = args[0];
+        const now = Date.now();
+        
+        // Handle saved searches API specifically
+        if (typeof url === 'string' && url.includes('/api/saved-searches')) {
+            savedSearchesFetchCount++;
+            
+            // Don't allow more than one saved searches API call per 5 seconds
+            if (now - lastSavedSearchesFetch < 5000 && savedSearchesFetchCount > 1) {
+                console.warn(`Blocking repeated saved searches API call (#${savedSearchesFetchCount})`);
+                return Promise.resolve(new Response(JSON.stringify([])));
+            }
+            
+            console.log(`Making saved searches API call #${savedSearchesFetchCount}`);
+            lastSavedSearchesFetch = now;
+        }
+        
+        return originalFetch.apply(this, args);
+    };
+    
+    console.log('Saved searches page protection initialized');
+})();
+</script>
+{% endblock %}

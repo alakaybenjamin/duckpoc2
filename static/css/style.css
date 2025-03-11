@@ -1,0 +1,408 @@
+:root {
+    --primary-color: #2C5282;
+    --secondary-color: #4A5568;
+    --accent-color: #E53E3E;
+    --background-color: #F7FAFC;
+    --text-color: #1A202C;
+    --pill-color: #CBD5E0;
+    --filter-bg: #FFFFFF;
+    --border-color: #E2E8F0;
+}
+
+body {
+    font-family: 'IBM Plex Sans', 'Source Sans Pro', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.navbar {
+    background-color: var(--primary-color);
+}
+
+.search-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+.search-box-container {
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.form-control:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(44, 82, 130, 0.25);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #1A365D;
+    border-color: #1A365D;
+}
+
+/* Suggestions styling */
+.suggestions-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    margin-top: 4px;
+    display: none;
+}
+
+.suggestion-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.suggestion-item:hover {
+    background-color: #f8f9fa;
+}
+
+.search-result-item {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem; /* Enhanced padding */
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-result-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.filters-container {
+    background: var(--filter-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.filter-group {
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 1rem;
+}
+
+.filter-group:last-child {
+    border-bottom: none;
+}
+
+.filter-group h5 {
+    font-size: 1rem;
+    color: var(--secondary-color);
+    margin-bottom: 0.8rem;
+}
+
+.filter-group label {
+    font-size: 0.9rem;
+    color: var(--secondary-color);
+    margin-bottom: 0.3rem;
+}
+
+.active-filters-container {
+    margin-bottom: 1rem;
+}
+
+.active-filters {
+    background-color: var(--filter-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .filters-container {
+        margin-bottom: 1rem;
+    }
+    .search-result-item {
+        padding: 1rem;
+    }
+}
+
+.suggestion-text {
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.suggestion-type {
+    font-size: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    background-color: var(--pill-color);
+    border-radius: 12px;
+    color: var(--secondary-color);
+}
+
+.category-pill {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background-color: var(--pill-color);
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    margin-left: 0.5rem;
+}
+
+/* Pagination Styles */
+.pagination-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+}
+
+.pagination-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+}
+
+.pagination-button {
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--primary-color);
+    border-radius: 4px;
+    background: white;
+    color: var(--primary-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    margin: 0 0.25rem;
+}
+
+.pagination-button:hover:not(:disabled) {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.pagination-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #f8f9fa;
+}
+
+.pagination-button.active {
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+}
+
+.pagination-ellipsis {
+    padding: 0.5rem;
+    color: var(--secondary-color);
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+}
+
+/* Responsive adjustments for pagination */
+@media (max-width: 768px) {
+    .pagination-button {
+        min-width: 2rem;
+        height: 2rem;
+        padding: 0.25rem;
+        font-size: 0.9rem;
+        margin: 0 0.15rem;
+    }
+
+    .pagination-container {
+        gap: 0.25rem;
+    }
+
+    .pagination-ellipsis {
+        min-width: 1.5rem;
+    }
+}
+
+.relevance-score {
+    color: #FFB900;
+    font-size: 1rem;
+    letter-spacing: 2px;
+}
+
+.result-metadata {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.search-result-item h3 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+.search-result-item h4 {
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+.search-results-container {
+    margin-bottom: 1rem;
+}
+
+.results-summary {
+    text-align: center;
+    color: var(--secondary-color);
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+
+/* Add these new styles for search pills */
+.search-pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.search-pill {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.search-pill:hover {
+    background-color: #1A365D;
+}
+
+.search-pill .remove-pill {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    padding: 0;
+    line-height: 1;
+    opacity: 0.7;
+    cursor: pointer;
+}
+
+.search-pill .remove-pill:hover {
+    opacity: 1;
+}
+
+/* Add styles for the filters panel */
+.card {
+    background: var(--filter-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1rem;
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+.filter-section-title {
+    color: var(--secondary-color);
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.form-label {
+    color: var(--text-color);
+    font-size: 0.9rem;
+    margin-bottom: 0.3rem;
+}
+
+.form-select-sm, .form-control-sm {
+    font-size: 0.875rem;
+}
+
+/* Make sure filters are visible on mobile */
+@media (max-width: 768px) {
+    .col-md-3 {
+        margin-bottom: 1.5rem;
+    }
+
+    .card {
+        margin-bottom: 1rem;
+    }
+}
+
+/* Ensure proper spacing between filter sections */
+#studyFilters, #indicationFilters, #procedureFilters {
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+#procedureFilters {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.result-description {
+    color: var(--text-color);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin: 1rem 0;
+}
+
+.study-details {
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.badge {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.65rem;
+    font-weight: 500;
+}

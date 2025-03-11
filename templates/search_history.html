@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Search History Timeline</h1>
+    <div id="errorContainer"></div>
+    <div class="timeline" id="searchTimeline">
+        <!-- Timeline items will be dynamically added here -->
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+    }
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        width: 2px;
+        height: 100%;
+        background: #007bff;
+    }
+    .timeline-item {
+        position: relative;
+        margin-bottom: 30px;
+    }
+    .timeline-content {
+        position: relative;
+        width: calc(50% - 30px);
+        padding: 15px;
+        border-radius: 5px;
+        background: #fff;
+        box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    .timeline-item:nth-child(odd) .timeline-content {
+        left: calc(50% + 30px);
+    }
+    .timeline-item:nth-child(even) .timeline-content {
+        left: 0;
+    }
+    .timeline-dot {
+        position: absolute;
+        left: 50%;
+        width: 15px;
+        height: 15px;
+        background: #007bff;
+        border-radius: 50%;
+        transform: translateX(-50%);
+    }
+    .timeline-date {
+        font-size: 0.9em;
+        color: #666;
+    }
+    .error-message {
+        color: #dc3545;
+        padding: 15px;
+        margin: 10px 0;
+        border: 1px solid #dc3545;
+        border-radius: 4px;
+        background-color: #f8d7da;
+    }
+    .no-history {
+        text-align: center;
+        padding: 20px;
+        color: #666;
+    }
+</style>
+
+<script>
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    }
+
+    function createTimelineItem(search) {
+        const item = document.createElement('div');
+        item.className = 'timeline-item';
+
+        const dot = document.createElement('div');
+        dot.className = 'timeline-dot';
+
+        const content = document.createElement('div');
+        content.className = 'timeline-content';
+
+        content.innerHTML = `
+            <div class="timeline-date">${formatDate(search.created_at)}</div>
+            <h5>Query: "${search.query}"</h5>
+            <p>
+                Category: ${search.category || 'All'}<br>
+                Results: ${search.results_count || 0}
+            </p>
+        `;
+
+        item.appendChild(dot);
+        item.appendChild(content);
+        return item;
+    }
+
+    function showError(message) {
+        const errorContainer = document.getElementById('errorContainer');
+        errorContainer.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    function clearError() {
+        const errorContainer = document.getElementById('errorContainer');
+        errorContainer.innerHTML = '';
+    }
+
+    async function loadSearchHistory() {
+        try {
+            const token = localStorage.getItem('auth_token');
+            if (!token) {
+                window.location.href = '/auth/login?next=/search-history';
+                return;
+            }
+
+            const response = await fetch('/api/search-history', {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/auth/login?next=/search-history';
+                    return;
+                }
+                throw new Error('Failed to fetch search history');
+            }
+
+            const data = await response.json();
+            clearError();
+
+            const timeline = document.getElementById('searchTimeline');
+            timeline.innerHTML = ''; // Clear existing items
+
+            if (!data || data.length === 0) {
+                timeline.innerHTML = '<div class="no-history">No search history available</div>';
+                return;
+            }
+
+            data.forEach(search => {
+                if (search && search.query) {  // Only create items for valid entries
+                    const timelineItem = createTimelineItem(search);
+                    timeline.appendChild(timelineItem);
+                }
+            });
+        } catch (error) {
+            console.error('Error loading search history:', error);
+            showError('Error loading search history. Please try again later.');
+        }
+    }
+
+    // Load search history when the page loads
+    document.addEventListener('DOMContentLoaded', loadSearchHistory);
+</script>
+{% endblock %}

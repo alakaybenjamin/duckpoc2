@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Scientific Papers Search</h1>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    <form method="GET" action="/scientific-papers" class="mb-4">
+        <div class="input-group mb-3">
+            <input type="text" name="q" class="form-control" placeholder="Search scientific papers..." value="{{ query }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <button class="btn btn-link" type="button" data-bs-toggle="collapse" data-bs-target="#filterCollapse">
+                    Filters
+                </button>
+            </div>
+            <div class="collapse" id="filterCollapse">
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Journal Filter -->
+                        <div class="col-md-4 mb-3">
+                            <label for="journal" class="form-label">Journal</label>
+                            <select name="journal" id="journal" class="form-select">
+                                <option value="">All Journals</option>
+                                <option value="Nature Medicine" {% if selected_journal == "Nature Medicine" %}selected{% endif %}>Nature Medicine</option>
+                                <option value="The Lancet" {% if selected_journal == "The Lancet" %}selected{% endif %}>The Lancet</option>
+                                <option value="Science" {% if selected_journal == "Science" %}selected{% endif %}>Science</option>
+                                <option value="Cell" {% if selected_journal == "Cell" %}selected{% endif %}>Cell</option>
+                                <option value="JAMA" {% if selected_journal == "JAMA" %}selected{% endif %}>JAMA</option>
+                            </select>
+                        </div>
+
+                        <!-- Publication Date Filter -->
+                        <div class="col-md-4 mb-3">
+                            <label for="date_range" class="form-label">Publication Date</label>
+                            <select name="date_range" id="date_range" class="form-select">
+                                <option value="">Any Time</option>
+                                <option value="last_week" {% if selected_date_range == "last_week" %}selected{% endif %}>Last Week</option>
+                                <option value="last_month" {% if selected_date_range == "last_month" %}selected{% endif %}>Last Month</option>
+                                <option value="last_year" {% if selected_date_range == "last_year" %}selected{% endif %}>Last Year</option>
+                            </select>
+                        </div>
+
+                        <!-- Citations Filter -->
+                        <div class="col-md-4 mb-3">
+                            <label for="citations" class="form-label">Citation Count</label>
+                            <select name="citations" id="citations" class="form-select">
+                                <option value="">Any Citations</option>
+                                <option value="0-10" {% if selected_citations == "0-10" %}selected{% endif %}>0-10 citations</option>
+                                <option value="11-50" {% if selected_citations == "11-50" %}selected{% endif %}>11-50 citations</option>
+                                <option value="51-100" {% if selected_citations == "51-100" %}selected{% endif %}>51-100 citations</option>
+                                <option value="100+" {% if selected_citations == "100+" %}selected{% endif %}>100+ citations</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <a href="/scientific-papers" class="btn btn-outline-secondary">Clear Filters</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if results %}
+    <div class="results">
+        {% for paper in results %}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">{{ paper.title }}</h5>
+                <p class="card-text font-italic">
+                    {% if paper.metadata.authors %}
+                        {{ paper.metadata.authors|join(', ') }}
+                    {% endif %}
+                    {% if paper.metadata.journal %}
+                        - {{ paper.metadata.journal }}
+                    {% endif %}
+                    {% if paper.metadata.publication_date %}
+                        ({{ paper.metadata.publication_date[:4] }})
+                    {% endif %}
+                </p>
+                <p class="card-text">{{ paper.description }}</p>
+                <div class="metadata">
+                    <span class="badge bg-info text-dark me-2">Citations: {{ paper.metadata.citations_count }}</span>
+                    {% if paper.metadata.keywords %}
+                        {% for keyword in paper.metadata.keywords %}
+                        <span class="badge bg-secondary me-1">{{ keyword }}</span>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+                {% if paper.metadata.doi %}
+                <small class="text-muted">DOI: {{ paper.metadata.doi }}</small>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+        {% if query %}
+        <div class="alert alert-info">No results found for "{{ query }}". Try different search terms.</div>
+        {% else %}
+        <div class="alert alert-info">Enter a search term to find scientific papers.</div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<!-- Add Bootstrap JavaScript for collapse functionality -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

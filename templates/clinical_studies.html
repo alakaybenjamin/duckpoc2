@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Filters Sidebar -->
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Filters</h5>
+                    <button id="resetFilters" class="btn btn-sm btn-outline-secondary">Reset</button>
+                </div>
+                <div class="card-body">
+                    <!-- Study Filters -->
+                    <div id="studyFilters" class="mb-4">
+                        <h6 class="filter-section-title">Study Filters</h6>
+                        <div class="mb-3">
+                            <label for="statusFilter" class="form-label">Status</label>
+                            <select class="form-select form-select-sm" id="statusFilter" multiple size="4">
+                                <option value="Not yet recruiting">Not yet recruiting</option>
+                                <option value="Recruiting">Recruiting</option>
+                                <option value="Active">Active</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Suspended">Suspended</option>
+                                <option value="Terminated">Terminated</option>
+                            </select>
+                            <div class="form-text">Hold Ctrl/Cmd to select multiple options</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phaseFilter" class="form-label">Phase</label>
+                            <select class="form-select form-select-sm" id="phaseFilter">
+                                <option value="">All</option>
+                                <option value="phase_1">Phase 1</option>
+                                <option value="phase_2">Phase 2</option>
+                                <option value="phase_3">Phase 3</option>
+                                <option value="phase_4">Phase 4</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="drugFilter" class="form-label">Drug</label>
+                            <select class="form-select form-select-sm" id="drugFilter">
+                                <option value="">All</option>
+                                <!-- Drug options will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="startDateFilter" class="form-label">Start Date</label>
+                            <input type="date" class="form-control form-control-sm" id="startDateFilter">
+                        </div>
+                        <div class="mb-3">
+                            <label for="endDateFilter" class="form-label">End Date</label>
+                            <input type="date" class="form-control form-control-sm" id="endDateFilter">
+                        </div>
+                    </div>
+
+                    <!-- Indication Filters -->
+                    <div id="indicationFilters" class="mb-4">
+                        <h6 class="filter-section-title">Indication Filters</h6>
+                        <div class="mb-3">
+                            <label for="indicationCategoryFilter" class="form-label">Category</label>
+                            <select class="form-select form-select-sm" id="indicationCategoryFilter">
+                                <option value="">All</option>
+                                <option value="oncology">Oncology</option>
+                                <option value="cardiology">Cardiology</option>
+                                <option value="neurology">Neurology</option>
+                                <option value="immunology">Immunology</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="severityFilter" class="form-label">Severity</label>
+                            <select class="form-select form-select-sm" id="severityFilter">
+                                <option value="">All</option>
+                                <option value="mild">Mild</option>
+                                <option value="moderate">Moderate</option>
+                                <option value="severe">Severe</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Procedure Filters -->
+                    <div id="procedureFilters" class="mb-4">
+                        <h6 class="filter-section-title">Procedure Filters</h6>
+                        <div class="mb-3">
+                            <label for="procedureCategoryFilter" class="form-label">Category</label>
+                            <select class="form-select form-select-sm" id="procedureCategoryFilter">
+                                <option value="">All</option>
+                                <option value="diagnostic">Diagnostic</option>
+                                <option value="therapeutic">Therapeutic</option>
+                                <option value="preventive">Preventive</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="riskLevelFilter" class="form-label">Risk Level</label>
+                            <select class="form-select form-select-sm" id="riskLevelFilter">
+                                <option value="">All</option>
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="minDurationFilter" class="form-label">Min Duration (minutes)</label>
+                            <input type="number" class="form-control form-control-sm" id="minDurationFilter">
+                        </div>
+                        <div class="mb-3">
+                            <label for="maxDurationFilter" class="form-label">Max Duration (minutes)</label>
+                            <input type="number" class="form-control form-control-sm" id="maxDurationFilter">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            <h1>Clinical Studies Search</h1>
+            <div class="search-container mb-4">
+                <div class="search-box-container">
+                    <div class="input-group">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search clinical studies..." value="{{ query }}">
+                        <button id="searchButton" class="btn btn-primary">Search</button>
+                    </div>
+                    <div id="suggestions" class="suggestions-container"></div>
+                </div>
+                <div id="searchPills" class="search-pills mt-2"></div>
+            </div>
+
+            <div id="searchResults" class="results">
+                {% if results %}
+                    {% for study in results %}
+                    <div class="search-result-item mb-4 p-3 border rounded bg-light">
+                        <h4 class="mb-2">{{ study.title }}</h4>
+                        <div class="result-metadata mb-2">
+                            <span class="badge bg-primary me-2">Clinical Study</span>
+                            {% if study.phase %}
+                            <span class="badge bg-secondary me-2">Phase: {{ study.phase }}</span>
+                            {% endif %}
+                            {% if study.status %}
+                            <span class="badge bg-info me-2">Status: {{ study.status }}</span>
+                            {% endif %}
+                            {% if study.indication_category %}
+                            <span class="badge bg-success me-2">Category: {{ study.indication_category }}</span>
+                            {% endif %}
+                            {% if study.risk_level %}
+                            <span class="badge bg-warning text-dark me-2">Risk: {{ study.risk_level }}</span>
+                            {% endif %}
+                            {% if study.severity %}
+                            <span class="badge bg-danger me-2">Severity: {{ study.severity }}</span>
+                            {% endif %}
+                        </div>
+                        <p class="result-description">{{ study.description }}</p>
+                        <div class="study-details mt-2">
+                            <small class="text-muted">
+                                {% if study.start_date %}Start Date: {{ study.start_date }}<br>{% endif %}
+                                {% if study.end_date %}End Date: {{ study.end_date }}<br>{% endif %}
+                                {% if study.duration %}Duration: {{ study.duration }} minutes<br>{% endif %}
+                                {% if study.procedure_category %}Procedure: {{ study.procedure_category }}{% endif %}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            <div id="pagination" class="mt-4"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/search.js"></script>
+{% endblock %}

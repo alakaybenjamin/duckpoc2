@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="search-container">
+    <h1 class="text-center mb-4">BioMed Search</h1>
+    <div class="search-box-container mb-3">
+        <div class="input-group">
+            <input type="text" id="searchInput" class="form-control" placeholder="Search medical studies, indications, or procedures...">
+            <button class="btn btn-primary" type="button" id="searchButton">Search</button>
+            <button class="btn btn-outline-secondary" type="button" id="saveSearchButton">Save Search</button>
+        </div>
+        <div id="suggestions" class="suggestions-container"></div>
+    </div>
+
+    <!-- Search pills container -->
+    <div id="searchPills" class="search-pills-container mb-3">
+        <!-- Search pills will be added here -->
+    </div>
+
+    <style>
+        .search-box-container {
+            position: relative;
+            z-index: 1001;
+        }
+        .suggestions-container {
+            position: absolute;
+            width: 100%;
+            z-index: 1000;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        .search-pills-container {
+            display: flex !important;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            min-height: 30px;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            z-index: 999;
+        }
+        .search-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0.75rem;
+            background-color: #0d6efd;
+            color: white;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .search-pill .btn-close {
+            font-size: 0.75rem;
+            padding: 0.25rem;
+            margin-left: 0.25rem;
+            opacity: 0.8;
+            cursor: pointer;
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        .search-pill .btn-close:hover {
+            opacity: 1;
+        }
+    </style>
+
+    {% include 'includes/filters.html' %}
+    {% include 'includes/results.html' %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/search.js"></script>
+{% endblock %}
